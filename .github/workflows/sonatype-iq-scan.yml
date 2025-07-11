@@ -23,18 +23,18 @@ jobs:
         run: mvn -f pom.xml package
 
       - name: Sonatype IQ Policy Evaluation
-        uses: sonatype-nexus-community/scan-github-action@main
+        uses: sonatype/iq-action@v1.0.0
         with:
-          iq-application-id: ${{ secrets.IQ_APPLICATION_ID }}
-          iq-server-url: ${{ secrets.IQ_SERVER_URL }}
-          iq-username: ${{ secrets.IQ_USER }}
-          iq-password: ${{ secrets.IQ_PASSWORD }}
-          iq-stage: "build"
-          iq-scan-targets: "."
-          iq-allow-failure: "false"
+          iqApplicationId: ${{ secrets.IQ_APPLICATION_ID }}
+          iqServerUrl: ${{ secrets.IQ_SERVER_URL }}
+          iqUsername: ${{ secrets.IQ_USER }}
+          iqPassword: ${{ secrets.IQ_PASSWORD }}
+          iqStage: "build"
+          scanTargets: "."
+          failOnPolicyViolation: true
         
       - name: Upload Policy Evaluation Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: WebGoat-Legacy-policy-eval-report
           path: WebGoat-Legacy-policy-eval-report.html
