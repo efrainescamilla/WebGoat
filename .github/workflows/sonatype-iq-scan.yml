@@ -20,19 +20,18 @@ jobs:
     
     - name: Build with Maven
       run: |
-        # Configuración adicional para compatibilidad
         export MAVEN_OPTS="-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
         mvn -B -DskipTests clean package
         
     - name: Sonatype IQ Scan
-      uses: sonatype/actions/scan@v1
+      uses: sonatype/nexus-platform-actions/iq-scan@v1
       with:
         iq-server-url: ${{ secrets.IQ_SERVER_URL }}
         iq-username: ${{ secrets.IQ_USERNAME }}
         iq-password: ${{ secrets.IQ_PASSWORD }}
         iq-application-id: ${{ secrets.IQ_APPLICATION_ID }}
         iq-stage: build
-        scan-target: target/WebGoat-6.0.2.war
+        scan-target: "target/WebGoat-6.0.2.war"
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
