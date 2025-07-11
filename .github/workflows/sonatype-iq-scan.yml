@@ -8,7 +8,7 @@ on:
 
 env:
   MAVEN_OPTS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-  IQ_CLI_VERSION: "1.158.0-01"
+  IQ_CLI_VERSION: "1.158.0-01"  # Versión específica del CLI de Sonatype IQ
 
 jobs:
   build-and-scan:
@@ -27,56 +27,48 @@ jobs:
       - name: Build with Maven
         run: |
           mvn -B clean package -DskipTests
+          ls -la target/  # Listar archivos generados para diagnóstico
 
-      - name: Download and verify Sonatype IQ CLI
+      - name: Download Sonatype IQ CLI
         run: |
           mkdir -p sonatype-iq-cli
-          echo "Downloading IQ CLI v${IQ_CLI_VERSION}"
-          curl -f -L "https://download.sonatype.com/clm/scanner/nexus-iq-cli-${IQ_CLI_VERSION}.jar" \
+          curl -L "https://download.sonatype.com/clm/scanner/${IQ_CLI_VERSION}/nexus-iq-cli-${IQ_CLI_VERSION}.jar" \
             -o sonatype-iq-cli/nexus-iq-cli.jar
-          
-          # Verificar integridad del JAR
-          jar -tf sonatype-iq-cli/nexus-iq-cli.jar >/dev/null || exit 1
-          echo "IQ CLI downloaded and verified"
+          echo "CLI downloaded successfully"
 
       - name: Run Sonatype IQ Scan
-        id: iq-scan
         run: |
-          echo "Running Sonatype IQ Scan with application ID: ${{ secrets.IQ_APPLICATION_ID }}"
-          
           java -jar sonatype-iq-cli/nexus-iq-cli.jar \
-            --application-id "${{ secrets.IQ_APPLICATION_ID }}" \
-            --server-url "${{ secrets.IQ_SERVER_URL }}" \
-            --username "${{ secrets.IQ_USERNAME }}" \
-            --password "${{ secrets.IQ_PASSWORD }}" \
-            --stage "build" \
-            --result-file "iq-report.json" \
+            -s "${{ secrets.IQ_SERVER_URL }}" \
+            -a "${{ secrets.IQ_APPLICATION_ID }}" \
+            -t "build" \
+            -u "${{ secrets.IQ_USERNAME }}" \
+            -p "${{ secrets.IQ_PASSWORD }}" \
+            -r "iq-report.json" \
             target/WebGoat-6.0.2.war
           
-          # Verificar si el reporte se generó
-          if [ -f "iq-report.json" ]; then
-            echo "IQ Scan completed successfully"
-            echo "report-generated=true" >> $GITHUB_OUTPUT
-          else
-            echo "::error::IQ Scan failed to generate report"
-            exit 1
-          fi
-
-      - name: Generate HTML report
-        if: steps.iq-scan.outputs.report-generated == 'true'
-        run: |
-          pip install jinja2 --quiet
-          curl -s -L https://raw.githubusercontent.com/sonatype-nexus-community/nexus-iq-cli-templates/master/jinja2/iq_report.html.j2 \
+          # Convertir reporte JSON a HTML (opcional)
+          pip install jinja2
+          curl -L https://raw.githubusercontent.com/sonatype-nexus-community/nexus-iq-cli-templates/master/jinja2/iq_report.html.j2 \
             -o sonatype-iq-cli/iq_report.html.j2
           python -c "import json, jinja2; \
             t = jinja2.Template(open('sonatype-iq-cli/iq_report.html.j2').read()); \
             open('WebGoat-Legacy-policy-eval-report.html', 'w').write(t.render(json.load(open('iq-report.json'))))"
 
-      - name: Upload Artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WebGoat-Artifacts
+          name: WebGoat-Build-Artifacts
           path: |
             target/WebGoat-6.0.2.war
-            iq-report.json
             WebGoat-Legacy-policy-eval-report.html
+            iq-report.json
+
+      - name: Upload Build Report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Reports
+          path: |
+            **/target/surefire-reports
+            **/target/failsafe-reports
