@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <name>WebGoat</name>
@@ -9,12 +10,30 @@
 
     <!-- Shared version number properties -->
     <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>ISO-8859-1</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>ISO-8859-1</project.reporting.outputEncoding>
+        
         <org.springframework.version>3.2.4.RELEASE</org.springframework.version>
         <spring.security.version>3.2.4.RELEASE</spring.security.version>
         <tiles.version>2.2.2</tiles.version>
         <!-- If run from Bamboo this will be replaced with the bamboo build number -->
         <build.number>local</build.number>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>old-releases</id>
+            <url>https://repo.spring.io/libs-release</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
     <build>
         <resources>
@@ -29,16 +48,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-		    <version>3.2</version>
+                <version>3.8.1</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
-                    <encoding>ISO-8859-1</encoding>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <compilerArguments>
+                        <bootclasspath>${java.home}/lib/rt.jar:${java.home}/lib/jce.jar</bootclasspath>
+                    </compilerArguments>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
+                <version>3.3.2</version>
                 <configuration>
                     <manifest>
                         <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
@@ -73,32 +96,32 @@
             </plugin>            
         </plugins>
     </build>
-	
+    
     <distributionManagement>
       <repository>
-			<id>releases</id>
-			<name>releases</name>
-			<url>${env.Nexus_REPO_URL}releases/</url>
-		</repository>
-		<snapshotRepository>
-			<id>snapshots</id>
-			<name>Snapshots</name>
-			<url>${env.Nexus_REPO_URL}snapshots/</url>
-		</snapshotRepository>
+            <id>releases</id>
+            <name>releases</name>
+            <url>${env.Nexus_REPO_URL}releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>Snapshots</name>
+            <url>${env.Nexus_REPO_URL}snapshots/</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <dependencies>
-	<dependency>
+        <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-bundle</artifactId>
             <version>1.11.325</version>
         </dependency>
         <dependency>
-		<groupId>com.h2database</groupId>
-		<artifactId>h2</artifactId>
-		<version>1.4.187</version>
-	</dependency>
-	<dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.4.187</version>
+        </dependency>
+        <dependency>
             <groupId>javax.activation</groupId>
             <artifactId>activation</artifactId>
             <version>1.1</version>
@@ -128,16 +151,6 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.3.2</version>
         </dependency>
-        <!--<dependency>
-            <groupId>commons-fileupload</groupId>
-            <artifactId>commons-fileupload</artifactId>
-            <version>1.2.1</version>
-	</dependency>-->
-        <!--<dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>1.4</version>
-	</dependency>-->
         <dependency>
             <groupId>commons-collections</groupId>
             <artifactId>commons-collections</artifactId>
@@ -184,12 +197,21 @@
             <artifactId>hsqldb</artifactId>
             <version>1.8.0.7</version>
         </dependency>
-        <!--<dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
-	</dependency>-->
-        
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.17.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.17.1</version>
+        </dependency>
         <dependency>
             <groupId>wsdl4j</groupId>
             <artifactId>wsdl4j</artifactId>
@@ -222,9 +244,7 @@
             <scope>provided</scope>
         </dependency>
 
-
         <!-- ************* spring MVC and related dependencies ************** -->
-
         <!-- servlet API -->
         <dependency>
             <groupId>javax</groupId>
@@ -305,25 +325,6 @@
         </dependency>
 
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.jms</groupId>
-                    <artifactId>jms</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jdmk</groupId>
-                    <artifactId>jmxtools</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jmx</groupId>
-                    <artifactId>jmxri</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.8.1</version>
@@ -341,14 +342,5 @@
             <version>1.7.7</version>
             <type>jar</type>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.7</version>
-            <type>jar</type>
-        </dependency>
-
-        <!-- ************* END spring MVC and related dependencies ************** -->
-
     </dependencies>
 </project>
