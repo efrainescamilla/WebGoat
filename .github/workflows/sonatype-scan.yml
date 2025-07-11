@@ -9,8 +9,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build WAR
-        run: mvn package -DskipTests
+      - name: Build WAR (override compiler version)
+        run: mvn package -DskipTests -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
+  
+      #- name: Build WAR
+      #  run: mvn package -DskipTests
 
       - name: Run evaluate action
         id: evaluate
