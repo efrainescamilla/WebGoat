@@ -1,0 +1,40 @@
+name: Sonatype IQ Scan and Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        run: mvn -f pom.xml package
+
+      - name: Sonatype IQ Policy Evaluation
+        uses: sonatype-nexus-community/scan-github-action@main
+        with:
+          iq-application-id: ${{ secrets.IQ_APPLICATION_ID }}
+          iq-server-url: ${{ secrets.IQ_SERVER_URL }}
+          iq-username: ${{ secrets.IQ_USER }}
+          iq-password: ${{ secrets.IQ_PASSWORD }}
+          iq-stage: "build"
+          iq-scan-targets: "."
+          iq-allow-failure: "false"
+        
+      - name: Upload Policy Evaluation Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: WebGoat-Legacy-policy-eval-report
+          path: WebGoat-Legacy-policy-eval-report.html
