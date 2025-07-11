@@ -1,4 +1,4 @@
-name: WebGoat Build and Scan
+name: WebGoat Build and Security Scan
 
 on:
   push:
@@ -6,35 +6,69 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  MAVEN_OPTS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+  IQ_CLI_VERSION: "1.158.0-01"  # Versión específica del CLI de Sonatype IQ
+
 jobs:
-  build:
+  build-and-scan:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up JDK 8
-      uses: actions/setup-java@v3
-      with:
-        java-version: '8'
-        distribution: 'temurin'
-    
-    - name: Build with Maven
-      run: |
-        export MAVEN_OPTS="-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-        mvn -B -DskipTests clean package
-        
-    - name: Sonatype IQ Scan
-      uses: sonatype/nexus-platform-actions/iq-scan@v1
-      with:
-        iq-server-url: ${{ secrets.IQ_SERVER_URL }}
-        iq-username: ${{ secrets.IQ_USERNAME }}
-        iq-password: ${{ secrets.IQ_PASSWORD }}
-        iq-application-id: ${{ secrets.IQ_APPLICATION_ID }}
-        iq-stage: build
-        scan-target: "target/WebGoat-6.0.2.war"
-        
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: WebGoat-6.0.2
-        path: target/WebGoat-6.0.2.war
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: |
+          mvn -B clean package -DskipTests
+          ls -la target/  # Listar archivos generados para diagnóstico
+
+      - name: Download Sonatype IQ CLI
+        run: |
+          mkdir -p sonatype-iq-cli
+          curl -L "https://download.sonatype.com/clm/scanner/${IQ_CLI_VERSION}/nexus-iq-cli-${IQ_CLI_VERSION}.jar" \
+            -o sonatype-iq-cli/nexus-iq-cli.jar
+          echo "CLI downloaded successfully"
+
+      - name: Run Sonatype IQ Scan
+        run: |
+          java -jar sonatype-iq-cli/nexus-iq-cli.jar \
+            -s "${{ secrets.IQ_SERVER_URL }}" \
+            -a "${{ secrets.IQ_APPLICATION_ID }}" \
+            -t "build" \
+            -u "${{ secrets.IQ_USERNAME }}" \
+            -p "${{ secrets.IQ_PASSWORD }}" \
+            -r "iq-report.json" \
+            target/WebGoat-6.0.2.war
+          
+          # Convertir reporte JSON a HTML (opcional)
+          pip install jinja2
+          curl -L https://raw.githubusercontent.com/sonatype-nexus-community/nexus-iq-cli-templates/master/jinja2/iq_report.html.j2 \
+            -o sonatype-iq-cli/iq_report.html.j2
+          python -c "import json, jinja2; \
+            t = jinja2.Template(open('sonatype-iq-cli/iq_report.html.j2').read()); \
+            open('WebGoat-Legacy-policy-eval-report.html', 'w').write(t.render(json.load(open('iq-report.json'))))"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebGoat-Build-Artifacts
+          path: |
+            target/WebGoat-6.0.2.war
+            WebGoat-Legacy-policy-eval-report.html
+            iq-report.json
+
+      - name: Upload Build Report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Reports
+          path: |
+            **/target/surefire-reports
+            **/target/failsafe-reports
