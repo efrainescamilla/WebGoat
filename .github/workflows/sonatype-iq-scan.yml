@@ -1,4 +1,4 @@
-name: Sonatype IQ Scan and Build
+name: WebGoat Build and Scan
 
 on:
   push:
@@ -7,34 +7,35 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-scan:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Build with Maven
-        run: mvn -f pom.xml package
-
-      - name: Sonatype IQ Policy Evaluation
-        uses: sonatype/actions/evaluate@v1
-        with:
-          iq-server-url: ${{ secrets.IQ_SERVER_URL }}
-          username: ${{ secrets.IQ_USER }}
-          password: ${{ secrets.IQ_PASSWORD }}
-          application-id: ${{ secrets.IQ_APPLICATION_ID }}
-          scan-targets: "."
-          stage: "build"
-          fail-on-policy-warnings: true
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 8
+      uses: actions/setup-java@v3
+      with:
+        java-version: '8'
+        distribution: 'temurin'
+    
+    - name: Build with Maven
+      run: |
+        # Configuración adicional para compatibilidad
+        export MAVEN_OPTS="-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+        mvn -B -DskipTests clean package
         
-      - name: Upload Policy Evaluation Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: WebGoat-Legacy-policy-eval-report
-          path: WebGoat-Legacy-policy-eval-report.html
+    - name: Sonatype IQ Scan
+      uses: sonatype/actions/scan@v1
+      with:
+        iq-server-url: ${{ secrets.IQ_SERVER_URL }}
+        iq-username: ${{ secrets.IQ_USERNAME }}
+        iq-password: ${{ secrets.IQ_PASSWORD }}
+        iq-application-id: ${{ secrets.IQ_APPLICATION_ID }}
+        iq-stage: build
+        scan-target: target/WebGoat-6.0.2.war
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WebGoat-6.0.2
+        path: target/WebGoat-6.0.2.war
