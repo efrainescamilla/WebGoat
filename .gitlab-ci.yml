@@ -1,0 +1,76 @@
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - test
+  - dast
+  - deploy
+
+include:
+- template: Security/SAST.gitlab-ci.yml
+- template: DAST.gitlab-ci.yml
+- template: Security/Secret-Detection.gitlab-ci.yml
+- template: Jobs/Dependency-Scanning.gitlab-ci.yml
+
+#- template: Code-Quality.gitlab-ci.yml
+#- template: Security/Container-Scanning.gitlab-ci.yml
+#- template: Security/License-Scanning.gitlab-ci.yml
+
+variables:
+  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+  DS_EXCLUDED_ANALYZERS: "gemnasium"
+  DAST_WEBSITE: https://example.com
+  DOCKER_TLS_CERTDIR: "/certs"
+  SECRET_DETECTION_EXCLUDED_PATHS: tests/
+
+build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+  - echo "Compiling the code..."
+  - echo "Compile complete."
+  
+build:
+  stage: build
+  image: maven:3.3.9
+  script:
+    - mvn -f pom.xml package
+    - echo "building..."
+
+iq_policy_eval:
+  stage: build
+  image: sonatype/gitlab-nexus-iq-pipeline:latest
+  allow_failure: false
+  script:
+    - /sonatype/evaluate --application-id WebGoat-Legacy .
+    - ERROR=$?
+    - echo error code was $ERROR
+    - exit $ERROR
+  artifacts:
+    name: "policy-eval-WebGoat-Legacy"
+    paths:
+      - WebGoat-Legacy-policy-eval-report.html
+
+unit-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  script:
+  - echo "Running unit tests... This will take about 60 seconds."
+  - echo "Code coverage is 100%"
+
+deployQA-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  image: maven:3.3.9
+  environment:
+    name: Testing
+  script:
+  - echo "Deploying application QA..."
+  - echo "Application successfully deployed to QA."
+  when: manual
+
+deployProd-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  image: maven:3.3.9
+  environment:
+    name: Production
+  script:
+  - echo "Deploying application PROD..."
+  - mvn $MAVEN_CLI_OPTS deploy -Dmaven.test.skip=true
+  - echo "Application successfully deployed to prod."
+  when: manual
