@@ -23,15 +23,15 @@ jobs:
         run: mvn -f pom.xml package
 
       - name: Sonatype IQ Policy Evaluation
-        uses: sonatype/iq-action@v1.0.0
+        uses: sonatype/actions/evaluate@v1
         with:
-          iqApplicationId: ${{ secrets.IQ_APPLICATION_ID }}
-          iqServerUrl: ${{ secrets.IQ_SERVER_URL }}
-          iqUsername: ${{ secrets.IQ_USER }}
-          iqPassword: ${{ secrets.IQ_PASSWORD }}
-          iqStage: "build"
-          scanTargets: "."
-          failOnPolicyViolation: true
+          iq-server-url: ${{ secrets.IQ_SERVER_URL }}
+          username: ${{ secrets.IQ_USER }}
+          password: ${{ secrets.IQ_PASSWORD }}
+          application-id: ${{ secrets.IQ_APPLICATION_ID }}
+          scan-targets: "."
+          stage: "build"
+          fail-on-policy-warnings: true
         
       - name: Upload Policy Evaluation Report
         uses: actions/upload-artifact@v4
